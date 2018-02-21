@@ -1,0 +1,7 @@
+upserver_ip = "1.2.3.4"
+upserver_port = "9999"
+dnserver_ip="localhost"
+dnserver_port = 8888
+maxsize=65535
+rpckey=''
+rpciv=bytes((0,0,0,0,0,0,0,0))
