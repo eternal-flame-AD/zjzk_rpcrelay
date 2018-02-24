@@ -7,6 +7,11 @@ from pyDes import des, CBC, PAD_PKCS5
 import serverconfig
 import time
 import rpcparse
+import random
+def test_upstream_packet_loss():
+    return serverconfig.uplossrate<(1-random.uniform(0,1))
+def test_dnstream_packet_loss():
+    return serverconfig.dnlossrate<(1-random.uniform(0,1))
 def des_encrypt(s):
     """
     DES 加密
@@ -54,8 +59,19 @@ class upstream_server():
         global dpacket_queue
         while True:
             pkt=self.conn.recv(serverconfig.maxsize)
+            if len(pkt)==0:
+                print("ERR:Lost Upstream connection... Trying to establish another connection...")
+                try:
+                    self.conn.close()
+                except:
+                    pass
+                self.conn=socket.create_connection((serverconfig.upserver_ip,serverconfig.upserver_port))
+                print("Upstream connected")
             print("RX:",decrypt_packet(pkt))
-            dpacket_queue.put(pkt)
+            if test_dnstream_packet_loss():
+                dpacket_queue.put(pkt)
+            else:
+                print("Packet loss!")
       
 class downstream_server():
     """
@@ -88,8 +104,19 @@ class downstream_server():
         global upacket_queue
         while True:
             pkt=self.conn.recv(serverconfig.maxsize)
+            if len(pkt)==0:
+                print("ERR:Lost Downstream connection...Waiting for new connection")
+                try:
+                    self.conn.close()
+                except:
+                    pass
+                self.conn, self.remoteaddr = self.s.accept()
+                print("Dnstream connected")
             print("TX:",decrypt_packet(pkt))
-            upacket_queue.put(pkt)
+            if test_upstream_packet_loss():
+                upacket_queue.put(pkt)
+            else:
+                print("Packet loss")
 
 def upstream_server_thread():
     global upacket_queue,dpacket_queue
